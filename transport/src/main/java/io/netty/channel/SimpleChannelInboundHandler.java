@@ -103,6 +103,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
             }
         } finally {
             if (autoRelease && release) {
+                // 注意此处:: 千万别自己在实现类进行release,因为父类已经帮我们做了
                 ReferenceCountUtil.release(msg);
             }
         }

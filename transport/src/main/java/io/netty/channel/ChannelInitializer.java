@@ -49,6 +49,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Be aware that this class is marked as {@link Sharable} and so the implementation must be safe to be re-used.
  *
  * @param <C>   A sub-type of {@link Channel}
+ *
+ *  该实现类的使命就是 将我们添加的handler加入到pipeline中,
+ *  添加完毕后该类也就失去了意义,从ctx链表中移除
  */
 @Sharable
 public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter {
@@ -110,22 +113,30 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             // surprises if a ChannelInitializer will add another ChannelInitializer. This is as all handlers
             // will be added in the expected order.
             if (initChannel(ctx)) {
-
                 // We are done with init the Channel, removing the initializer now.
                 removeState(ctx);
             }
         }
     }
 
+    /**
+     * 只是把 initMap中的ctx 移除
+     * @param ctx
+     * @throws Exception
+     */
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         initMap.remove(ctx);
     }
 
+    /**
+     * 模板模式
+     */
     @SuppressWarnings("unchecked")
     private boolean initChannel(ChannelHandlerContext ctx) throws Exception {
         if (initMap.add(ctx)) { // Guard against re-entrance.
             try {
+                // 重点  , 执行我们定义的ChannelInitializer实现类重写的逻辑
                 initChannel((C) ctx.channel());
             } catch (Throwable cause) {
                 // Explicitly call exceptionCaught(...) as we removed the handler before calling initChannel(...).

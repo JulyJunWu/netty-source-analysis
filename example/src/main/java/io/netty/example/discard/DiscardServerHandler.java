@@ -15,17 +15,33 @@
  */
 package io.netty.example.discard;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.charset.Charset;
 
 /**
  * Handles a server-side channel.
  */
 public class DiscardServerHandler extends SimpleChannelInboundHandler<Object> {
 
+    static final InternalLogger logger = InternalLoggerFactory.getInstance(DiscardServerHandler.class);
+
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         // discard
+        ByteBuf byteBuf = (ByteBuf) msg;
+        String message = byteBuf.toString(Charset.defaultCharset());
+        InetSocketAddress socketAddress = (InetSocketAddress) ctx.channel().remoteAddress();
+        String hostName = socketAddress.getHostName();
+        int port = socketAddress.getPort();
+        logger.info("客户端IP:{}:{} | 数据:{}",hostName,port,message );
     }
 
     @Override

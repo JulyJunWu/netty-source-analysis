@@ -56,6 +56,9 @@ import static io.netty.channel.ChannelHandlerMask.MASK_USER_EVENT_TRIGGERED;
 import static io.netty.channel.ChannelHandlerMask.MASK_WRITE;
 import static io.netty.channel.ChannelHandlerMask.mask;
 
+/**
+ * 双向链表结构
+ */
 abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannelHandlerContext.class);
@@ -904,6 +907,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return false;
     }
 
+    /**
+     * 查找入栈请求handler
+     * @param mask
+     * @return
+     */
     private AbstractChannelHandlerContext findContextInbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
         do {
@@ -925,10 +933,17 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return channel().voidPromise();
     }
 
+    /**
+     * 将当前ctx的handlerState设置为已移除
+     */
     final void setRemoved() {
         handlerState = REMOVE_COMPLETE;
     }
 
+    /**
+     * 通过CAS设置 handlerState状态
+     * @return
+     */
     final boolean setAddComplete() {
         for (;;) {
             int oldState = handlerState;
@@ -944,11 +959,18 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
+    /**
+     * 设置handlerState的状态
+     */
     final void setAddPending() {
         boolean updated = HANDLER_STATE_UPDATER.compareAndSet(this, INIT, ADD_PENDING);
         assert updated; // This should always be true as it MUST be called before setAddComplete() or setRemoved().
     }
 
+    /**
+     * 执行handler的handlerAdded函数
+     * @throws Exception
+     */
     final void callHandlerAdded() throws Exception {
         // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
         // any pipeline events ctx.handler() will miss them because the state will not allow it.
@@ -965,6 +987,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             }
         } finally {
             // Mark the handler as removed in any case.
+            // 标记该ctx已移除
             setRemoved();
         }
     }

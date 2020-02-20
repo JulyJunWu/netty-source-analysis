@@ -56,13 +56,22 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
-
+        /**
+         * 保存的数据包
+         */
         private final List<Object> readBuf = new ArrayList<Object>();
 
+        /**
+         * 非常重要
+         * 读取IO操作
+         *
+         *  服务器监听ACCEPT其实没啥逻辑, 主要是将该链接关联到 work线程即可
+         */
         @Override
         public void read() {
             assert eventLoop().inEventLoop();
             final ChannelConfig config = config();
+            //注意:此处这个pipeline是NioServerSocketChannel的,非NioSocketChannel
             final ChannelPipeline pipeline = pipeline();
             final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
             allocHandle.reset(config);
@@ -72,6 +81,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
+                        // 将SocketChannel连接包装成NioSocketChannel对象
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             break;
@@ -94,6 +104,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
                 readBuf.clear();
                 allocHandle.readComplete();
+                // 触发NioServerSocketChannel的readComplete事件
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {

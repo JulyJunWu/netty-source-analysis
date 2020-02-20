@@ -136,9 +136,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
 
         // 重点 添加Handler到ServerSocketChannel的ChannelPipeline中
+        // 由于该channel暂未注册到selector中,此处只是包装成一个任务保存在Pipeline中
         p.addLast(new ChannelInitializer<Channel>() {
             @Override  // ch是ServerSocketChannel, 是服务端的channel
             public void initChannel(final Channel ch) {
+                // 构建SocketServerChannel的handler
                 final ChannelPipeline pipeline = ch.pipeline();
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
@@ -148,7 +150,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 ch.eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        // 主要是将客户端连接与一些属性以及handler进行关联
+                        // SocketServerChannel的pipeline,主要是将客户端连接与一些属性以及handler进行关联
                         pipeline.addLast(new ServerBootstrapAcceptor(
                                 ch, currentChildGroup, currentChildHandler, currentChildOptions, currentChildAttrs));
                     }
@@ -194,6 +196,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             enableAutoReadTask = new Runnable() {
                 @Override
                 public void run() {
+                    // 设置自动读取数据
                     channel.config().setAutoRead(true);
                 }
             };
@@ -210,14 +213,15 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final Channel child = (Channel) msg;
-
+            //给NioSocketChannel添加handler
+            // 注意 ::: 因为此时该NioSocketChannel还未完成注册操作,所有此时只是将此handler包装成task
             child.pipeline().addLast(childHandler);
-
+            // 设置SocketChannel的可选参数和属性
             setChannelOptions(child, childOptions, logger);
             setAttributes(child, childAttrs);
 
             try {
-                // 轮训一个线程 , 然后将该channel注册上去
+                // 从work中轮训一个线程 , 然后将该channel注册上到该work的线程上
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     //注册完成的回调函数
                     @Override

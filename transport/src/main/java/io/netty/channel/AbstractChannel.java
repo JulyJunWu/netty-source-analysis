@@ -414,13 +414,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * {@link Unsafe} implementation which sub-classes must extend and use.
+     *
+     *  Server端的channel与之关联的Unsafe实现类NioMessageUnsafe
+     *  Client则是NioByteUnsafe
+     *
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
         private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
         private RecvByteBufAllocator.Handle recvHandle;
         private boolean inFlush0;
-        /** true if the channel has never been registered, false otherwise */
+        /** true if the channel has never been registered, false otherwise
+         *  true : 表示 channel未注册
+         *  false :     channel已注册
+         **/
         private boolean neverRegistered = true;
 
         private void assertEventLoop() {
@@ -474,7 +481,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
-                            logger.info("channelId(longValue) -> [{}]即将注册到线程[{}]的selector上",promise.channel().id().asLongText(),Thread.currentThread().getName());
+                            // 根据channel关联的Unsafe对象来看是服务端注册还是客户端注册
+                            logger.info("[{}]注册 | channelId(longValue) -> [{}] | 即将注册到线程[{}]的selector上",promise.channel().getClass().getSimpleName(),promise.channel().id().asLongText(),Thread.currentThread().getName());
                             register0(promise);
                         }
                     });
@@ -489,6 +497,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
         }
 
+        /**
+         * 注册
+         * @param promise
+         */
         private void register0(ChannelPromise promise) {
             try {
                 // check if the channel is still open as it could be closed in the mean time when the register
@@ -499,15 +511,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 boolean firstRegistration = neverRegistered;
                 // 开始注册(重点)
                 doRegister();
-                //设置为已注册
+                //设置当前channel为已注册
                 neverRegistered = false;
                 registered = true;
 
                 // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                 // user may already fire events through the pipeline in the ChannelFutureListener.
+                // 添加Handler到ChannelPipeline中
                 pipeline.invokeHandlerAddedIfNeeded();
-
+                // 设置该future执行成功,通知监听器等等
                 safeSetSuccess(promise);
+                // 触发channelHandler的注册
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
@@ -559,11 +573,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 closeIfClosed();
                 return;
             }
-
+            // isActive()InetSocketAddress
             if (!wasActive && isActive()) {
                 invokeLater(new Runnable() {
                     @Override
                     public void run() {
+                        //触发HandlerActive事件 , 连接就绪
                         pipeline.fireChannelActive();
                     }
                 });
@@ -837,6 +852,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             });
         }
 
+        /**
+         * 开始读取数据
+         */
         @Override
         public final void beginRead() {
             assertEventLoop();

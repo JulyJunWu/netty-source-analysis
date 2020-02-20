@@ -207,6 +207,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * </ul>
      *
      *  最终底层操作IO的传输
+     *
+     *  与Channel相关的操作都是由Unsafe处理的
      */
     interface Unsafe {
 

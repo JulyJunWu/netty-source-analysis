@@ -136,15 +136,19 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 return;
             }
             final ChannelPipeline pipeline = pipeline();
+            // 缓冲大小分配, 根据记录自动调整应该给下一次的缓冲区分配多大的容量
             final ByteBufAllocator allocator = config.getAllocator();
             final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+            // 重置属性
             allocHandle.reset(config);
 
             ByteBuf byteBuf = null;
             boolean close = false;
             try {
                 do {
+                    //分配一个缓冲区
                     byteBuf = allocHandle.allocate(allocator);
+                    // 开始读取IO数据到缓冲区
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
@@ -165,6 +169,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
+                //触发NioSocketChannel 读完成事件
                 pipeline.fireChannelReadComplete();
 
                 if (close) {

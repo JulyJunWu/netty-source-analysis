@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.*;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
@@ -52,6 +53,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      */
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;
+    /**
+     * 是否正在读取数据标识???
+     */
     boolean readPending;
     private final Runnable clearReadPendingRunnable = new Runnable() {
         @Override
@@ -372,6 +376,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return loop instanceof NioEventLoop;
     }
 
+    /**
+     * 真正注册到selector中
+     * @throws Exception
+     */
     @Override
     protected void doRegister() throws Exception {
         boolean selected = false;
@@ -414,8 +422,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         readPending = true;
 
         final int interestOps = selectionKey.interestOps();
+        // 注册到selector的时候,指定的interestOps就是0
         if ((interestOps & readInterestOp) == 0) {
+            // 设置订阅事件 , 如果是ServerSocketChannel,那么就是订阅ACCEPT事件
             selectionKey.interestOps(interestOps | readInterestOp);
+            logger.info("channel->{} | channelId->{} | 订阅事件(interestOps)->{}",this.getClass().getSimpleName(),this.id().asLongText(),interestOps | readInterestOp);
         }
     }
 

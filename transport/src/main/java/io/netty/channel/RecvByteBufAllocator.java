@@ -35,6 +35,8 @@ public interface RecvByteBufAllocator {
 
     /**
      * @deprecated Use {@link ExtendedHandle}.
+     * 这个类的作用其实就是起到一个合理分配缓冲区大小的一个作用
+     * 会根据前2个的实际连接字节大小来 为后一个连接分配一个合理的缓冲区大小
      */
     @Deprecated
     interface Handle {

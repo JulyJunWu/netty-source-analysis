@@ -110,9 +110,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     /**
      * The NIO {@link Selector}.
+     *
+     *  selector与unwrappedSelector关系:
+     *     channel注册都是注册到unwrappedSelector
+     *     当未使用优化: 则 selector = unwrappedSelector
+     *     当使用优化后: 则 selector原生的,而unwrappedSelector是优化后(底层其实是对原的包装)的;
      */
     private Selector selector;
     private Selector unwrappedSelector;
+    /**
+     * Set的实现类,底层使用数组来实现
+     *  用来替代Selector中的字段
+     */
     private SelectedSelectionKeySet selectedKeys;
 
     private final SelectorProvider provider;
@@ -210,6 +219,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             @Override
             public Object run() {
                 try {
+                    // 使用优化后的Set(底层数组实现)代替原生Set
                     Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
                     Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
@@ -441,6 +451,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                     switch (strategy) {
                     case SelectStrategy.CONTINUE:
+                        // 此处的continue是跳出当前switch,而不是跳出for循环
                         continue;
 
                     case SelectStrategy.BUSY_WAIT:
@@ -485,11 +496,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         }
                     } finally {
                         // Ensure we always run tasks.
+                        // 执行定时任务和taskQueue任务
                         ranTasks = runAllTasks();
                     }
                 } else if (strategy > 0) {
                     final long ioStartTime = System.nanoTime();
                     try {
+                        //执行处理读写操作
+                        logger.info("线程 {} | 新增事件数量[{}]",Thread.currentThread().getName(),strategy);
                         processSelectedKeys();
                     } finally {
                         // Ensure we always run tasks.
@@ -497,6 +511,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         ranTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
                 } else {
+                    // 执行队列中的任务(包含了scheduledTaskQueue定时任务/提交的taskQueue的任务)
                     ranTasks = runAllTasks(0); // This will run the minimum number of tasks
                 }
 
@@ -572,6 +587,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private void processSelectedKeys() {
+        // 是使用使用后的selectedKeys还是使用原生JDK的,默认都是使用优化后的
         if (selectedKeys != null) {
             processSelectedKeysOptimized();
         } else {
@@ -643,7 +659,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // null out entry in the array to allow to have it GC'ed once the Channel close
             // See https://github.com/netty/netty/issues/2363
             selectedKeys.keys[i] = null;
-
+            // 就是我们注册channel的时候附加的属性 NioServerSocketChannel/NioSocketChannel
             final Object a = k.attachment();
 
             if (a instanceof AbstractNioChannel) {
@@ -709,8 +725,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
 
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
-            // to a spin loop
+            // to a spin loop 重点在此处 , 处理READ和ACCEPT操作
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                // 根据NioSererSocketChannel还是NioSocketChannel 执行各自实现类
                 unsafe.read();
             }
         } catch (CancelledKeyException ignored) {

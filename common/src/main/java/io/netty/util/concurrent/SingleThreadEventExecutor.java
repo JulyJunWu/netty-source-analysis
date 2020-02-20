@@ -56,6 +56,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             AtomicReferenceFieldUpdater.newUpdater(
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
 
+    /**
+     * 提交的任务
+     */
     private final Queue<Runnable> taskQueue;
 
     private volatile Thread thread;
@@ -257,6 +260,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    /**
+     *  1.取出需要执行的定时任务
+     *  2.将该定时任务将入到task队列中
+     *  3.加入失败的话则重新放入定时队列中
+     * @return
+     */
     private boolean fetchFromScheduledTaskQueue() {
         if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
             return true;
@@ -362,7 +371,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         boolean ranAtLeastOne = false;
 
         do {
+            //拉取定时任务
             fetchedAll = fetchFromScheduledTaskQueue();
+            // 执行taskQueue队列任务
             if (runAllTasksFrom(taskQueue)) {
                 ranAtLeastOne = true;
             }
@@ -407,6 +418,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @param taskQueue To poll and execute all tasks.
      *
      * @return {@code true} if at least one task was executed.
+     * 从目标队列中取出任务执行,直达没有任务为止
      */
     protected final boolean runAllTasksFrom(Queue<Runnable> taskQueue) {
         Runnable task = pollTaskFrom(taskQueue);
@@ -447,7 +459,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
     protected boolean runAllTasks(long timeoutNanos) {
+        // 从定时任务中拉取需要执行的任务(本质是从一个定时队列取出放入task队列中)
         fetchFromScheduledTaskQueue();
+        // 取出任务
         Runnable task = pollTask();
         if (task == null) {
             afterRunningAllTasks();
@@ -455,9 +469,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         final long deadline = timeoutNanos > 0 ? ScheduledFutureTask.nanoTime() + timeoutNanos : 0;
+        // 已执行的任务数量
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
+            // 执行任务
             safeExecute(task);
 
             runTasks ++;
@@ -470,14 +486,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     break;
                 }
             }
-
+            // 拉取下一任务
             task = pollTask();
             if (task == null) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 break;
             }
         }
-
+        // 执行完毕任务,必须执行该
         afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
         return true;
@@ -816,7 +832,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         boolean inEventLoop = inEventLoop();
         // 将任务直接放入队列中
         addTask(task);
-        // 如果是false,则说明该对象的Thread未创建,执行创建并启动
+        // 如果是false,则说明该线程池对应的Thread未创建,执行创建并启动
         // 线程懒加载方式,按需加载
         if (!inEventLoop) {
             startThread();

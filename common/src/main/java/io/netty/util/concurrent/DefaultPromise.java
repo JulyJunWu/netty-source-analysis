@@ -479,6 +479,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 checkNotNull(listener, "listener"));
     }
 
+    /**
+     *  通知监听器
+     *  调用回调
+     */
     private void notifyListeners() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
@@ -545,9 +549,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             this.listeners = null;
         }
         for (;;) {
+            // 多个监听器
             if (listeners instanceof DefaultFutureListeners) {
                 notifyListeners0((DefaultFutureListeners) listeners);
             } else {
+                // 单个监听器
                 notifyListener0(this, (GenericFutureListener<?>) listeners);
             }
             synchronized (this) {
@@ -563,6 +569,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
+    /**
+     * 执行回调
+     * @param listeners
+     */
     private void notifyListeners0(DefaultFutureListeners listeners) {
         GenericFutureListener<?>[] a = listeners.listeners();
         int size = listeners.size();
@@ -612,6 +622,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (RESULT_UPDATER.compareAndSet(this, null, objResult) ||
             RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, objResult)) {
             if (checkNotifyWaiters()) {
+                // 通知监听器, 其实就是调用加入回调
                 notifyListeners();
             }
             return true;
@@ -622,6 +633,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     /**
      * Check if there are any waiters and if so notify these.
      * @return {@code true} if there are any listeners attached to the promise, {@code false} otherwise.
+     *
+     *
+     * 1. 唤醒需要获取该future的结果而被阻塞的线程
+     * 2. 返回该future是否有 对应的监听器
      */
     private synchronized boolean checkNotifyWaiters() {
         if (waiters > 0) {

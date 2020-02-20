@@ -84,6 +84,9 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
         };
     }
 
+    /**
+     *  数组全部填充为null
+     */
     void reset() {
         reset(0);
     }

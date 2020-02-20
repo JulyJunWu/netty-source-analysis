@@ -133,6 +133,10 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         return heapBuffer(DEFAULT_INITIAL_CAPACITY);
     }
 
+    /**
+     * 分配指定容量的缓冲区
+     * 根据参数来决定是堆内缓冲还是直接缓冲
+     */
     @Override
     public ByteBuf ioBuffer(int initialCapacity) {
         if (PlatformDependent.hasUnsafe() || isDirectBufferPooled()) {

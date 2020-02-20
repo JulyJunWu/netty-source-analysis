@@ -115,6 +115,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     public boolean isActive() {
         // As java.nio.ServerSocketChannel.isBound() will continue to return true even after the channel was closed
         // we will also need to check if it is open.
+        // isBound()其实就是验证InetSocketAddress是否不为null
         return isOpen() && javaChannel().socket().isBound();
     }
 
@@ -137,9 +138,16 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         return SocketUtils.localSocketAddress(javaChannel().socket());
     }
 
+    /**
+     * 执行JDK的绑定
+     *  SocketServerChannel.bind
+     * @param localAddress
+     * @throws Exception
+     */
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
+        logger.info("服务端 channelId ->[{}] 绑定端口->[{}]",id().asLongText(),((InetSocketAddress)localAddress).getPort());
         if (PlatformDependent.javaVersion() >= 7) {
             javaChannel().bind(localAddress, config.getBacklog());
         } else {
