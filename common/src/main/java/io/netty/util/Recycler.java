@@ -200,11 +200,11 @@ public abstract class Recycler<T> {
     private static final class DefaultHandle<T> implements Handle<T> {
         int lastRecycledId;
         int recycleId;
-
+        // 是否被回收
         boolean hasBeenRecycled;
-
+        // 对象池
         Stack<?> stack;
-        Object value;
+        Object value;    //需要复用的对象(回收的对象)
 
         DefaultHandle(Stack<?> stack) {
             this.stack = stack;
@@ -220,7 +220,7 @@ public abstract class Recycler<T> {
             if (lastRecycledId != recycleId || stack == null) {
                 throw new IllegalStateException("recycled already");
             }
-
+            // 放回对象池中
             stack.push(this);
         }
     }
@@ -483,6 +483,7 @@ public abstract class Recycler<T> {
         // The biggest issue is if we do not use a WeakReference the Thread may not be able to be collected at all if
         // the user will store a reference to the DefaultHandle somewhere and never clear this reference (or not clear
         // it in a timely manner).
+        //该对象池所属的线程
         final WeakReference<Thread> threadRef;
         final AtomicInteger availableSharedCapacity;
         private final int maxDelayedQueues;
@@ -490,6 +491,9 @@ public abstract class Recycler<T> {
         private final int maxCapacity;
         private final int interval;
         DefaultHandle<?>[] elements;
+        /**
+         * elements中 真实含有缓存实例的大小
+         */
         int size;
         private int handleRecycleCount;
         private WeakOrderQueue cursor, prev;
@@ -623,6 +627,7 @@ public abstract class Recycler<T> {
 
         void push(DefaultHandle<?> item) {
             Thread currentThread = Thread.currentThread();
+            // 如果是当前的线程,则直接放回对象池
             if (threadRef.get() == currentThread) {
                 // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
                 pushNow(item);
@@ -630,6 +635,7 @@ public abstract class Recycler<T> {
                 // The current Thread is not the one that belongs to the Stack
                 // (or the Thread that belonged to the Stack was collected already), we need to signal that the push
                 // happens later.
+                // 这边就麻烦了,涉及多线程对象池的回收
                 pushLater(item, currentThread);
             }
         }

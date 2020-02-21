@@ -39,7 +39,7 @@ import java.util.Set;
  * </p>
  *
  * @param <V> the type of the thread-local variable
- * @see ThreadLocal
+ * @see ThreadLocal   使用索引来访问 FastThreadLocalThread , 主要目的是替换ThreadLocal
  */
 public class FastThreadLocal<V> {
 
@@ -138,7 +138,7 @@ public class FastThreadLocal<V> {
         if (v != InternalThreadLocalMap.UNSET) {
             return (V) v;
         }
-
+        // 初始化
         return initialize(threadLocalMap);
     }
 

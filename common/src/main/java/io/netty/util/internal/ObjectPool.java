@@ -21,6 +21,8 @@ import io.netty.util.Recycler;
  * Light-weight object pool.
  *
  * @param <T> the type of the pooled object
+ *
+ *           对象池
  */
 public abstract class ObjectPool<T> {
 

@@ -20,6 +20,9 @@ import io.netty.util.internal.UnstableApi;
 
 /**
  * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
+ *
+ * 优化后的Thread ,
+ * 主要是使用了InternalThreadLocalMap , 使用数组来代替ThreadLocalMap
  */
 public class FastThreadLocalThread extends Thread {
     // This will be set to true if we have a chance to wrap the Runnable.

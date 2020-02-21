@@ -62,6 +62,7 @@ public final class DiscardServer {
             // Wait until the server socket is closed.
             // In this example, this does not happen, but you can do that to gracefully
             // shut down your server.
+            // 阻塞
             f.channel().closeFuture().sync();
         } finally {
             // 优雅关闭

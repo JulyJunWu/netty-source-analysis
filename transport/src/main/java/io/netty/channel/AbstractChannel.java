@@ -904,7 +904,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 ReferenceCountUtil.release(msg);
                 return;
             }
-
+            // 将write数据包装成Entry加入到写出缓冲队列
             outboundBuffer.addMessage(msg, size, promise);
         }
 

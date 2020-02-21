@@ -50,6 +50,12 @@ import static java.lang.Math.min;
  * <li>{@link #getUserDefinedWritability(int)} and {@link #setUserDefinedWritability(int, boolean)}</li>
  * </ul>
  * </p>
+ *
+ *  消息缓冲,将一个个write的消息 转为一个个Entry , Entry是一个单向链表
+ *
+ *
+ *   消息缓存对象! 等待写入到 socketChannel
+ *
  */
 public final class ChannelOutboundBuffer {
     // Assuming a 64-bit JVM:
@@ -212,6 +218,7 @@ public final class ChannelOutboundBuffer {
 
     /**
      * Return the current message to write or {@code null} if nothing was flushed before and so is ready to be written.
+     * 当前写出的缓冲区
      */
     public Object current() {
         Entry entry = flushedEntry;
@@ -273,7 +280,7 @@ public final class ChannelOutboundBuffer {
             decrementPendingOutboundBytes(size, false, true);
         }
 
-        // recycle the entry
+        // recycle the entry  回收Entry对象
         e.recycle();
 
         return true;
@@ -315,6 +322,10 @@ public final class ChannelOutboundBuffer {
         return true;
     }
 
+    /**
+     * 移除已写入socketChannel的Entry
+     * @param e
+     */
     private void removeEntry(Entry e) {
         if (-- flushed == 0) {
             // processed everything
@@ -797,13 +808,21 @@ public final class ChannelOutboundBuffer {
         boolean processMessage(Object msg) throws Exception;
     }
 
+    static class MyObjectCreator implements ObjectCreator<Entry> {
+        @Override
+        public Entry newObject(Handle<Entry> handle) {
+            return new Entry(handle);
+        }
+    }
+
     static final class Entry {
-        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new ObjectCreator<Entry>() {
-            @Override
-            public Entry newObject(Handle<Entry> handle) {
-                return new Entry(handle);
-            }
-        });
+
+        /**
+         * 对象池,复用
+         *
+         * 明天的任务,搞清楚这个缓存池
+         */
+        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new MyObjectCreator());
 
         private final Handle<Entry> handle;
         Entry next;
@@ -848,7 +867,7 @@ public final class ChannelOutboundBuffer {
             }
             return 0;
         }
-
+        // 重置 , 回收到对象池(Stack中)
         void recycle() {
             next = null;
             bufs = null;
@@ -860,6 +879,7 @@ public final class ChannelOutboundBuffer {
             pendingSize = 0;
             count = -1;
             cancelled = false;
+            //将该对象回收到对象池
             handle.recycle(this);
         }
 

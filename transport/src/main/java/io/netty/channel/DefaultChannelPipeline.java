@@ -1390,6 +1390,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             unsafe.deregister(promise);
         }
 
+        /**
+         * 其实就是改变 订阅的事件 如 ACCEPT | READ
+         */
         @Override
         public void read(ChannelHandlerContext ctx) {
             unsafe.beginRead();
