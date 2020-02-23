@@ -464,9 +464,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                     switch (strategy) {
                     case SelectStrategy.CONTINUE:
-                        // 此处的continue是跳出当前switch,而不是跳出for循环
+                        //跳过
                         continue;
-
                     case SelectStrategy.BUSY_WAIT:
                         // fall-through to SELECT since the busy-wait is not supported with NIO
 

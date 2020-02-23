@@ -37,11 +37,11 @@ public class DiscardClientHandler extends SimpleChannelInboundHandler<Object> {
         this.sendScheduleMessage();
     }
 
-    private void sendScheduleMessage(){
+    private void sendScheduleMessage() {
         content = ctx.alloc().directBuffer(128);
         content.writeCharSequence(MESSAGE, Charset.defaultCharset());
         ctx.channel().eventLoop().scheduleAtFixedRate(() -> {
-            if (!Thread.currentThread().isInterrupted()){
+            if (!Thread.currentThread().isInterrupted()) {
                 ctx.writeAndFlush(content.retainedDuplicate());
             }
         }, 10L, 5L, TimeUnit.SECONDS);

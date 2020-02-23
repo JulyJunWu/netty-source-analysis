@@ -68,6 +68,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
+    /**
+     * 拒绝策略
+     */
     private final RejectedExecutionHandler rejectedExecutionHandler;
 
     private long lastExecutionTime;
@@ -419,7 +422,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *
      * @param taskQueue To poll and execute all tasks.
      * @return {@code true} if at least one task was executed.
-     * 从目标队列中取出任务执行,直达没有任务为止
+     * 从目标队列中取出任务执行,直到没有任务为止
      */
     protected final boolean runAllTasksFrom(Queue<Runnable> taskQueue) {
         Runnable task = pollTaskFrom(taskQueue);
@@ -459,6 +462,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
+     *
+     *  执行任务 应该花费的事件,一旦超出该时间,需要立即跳出
      */
     protected boolean runAllTasks(long timeoutNanos) {
         // 从定时任务中拉取需要执行的任务(本质是从一个定时队列取出放入task队列中)
@@ -483,7 +488,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
             // Check timeout every 64 tasks because nanoTime() is relatively expensive.
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
-            // 因为获取纳米数是一个耗时事件,所以当执行到N(N是64的倍数)个任务之后再执行比较是否已达到超时时间
+            // 因为获取纳秒是一个耗时事件,所以当执行到N(N是64的倍数)个任务之后再执行比较是否已达到超时时间
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
