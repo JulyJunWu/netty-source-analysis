@@ -136,7 +136,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private final AtomicLong nextWakeupNanos = new AtomicLong(AWAKE);
 
     private final SelectStrategy selectStrategy;
-
+    /**
+     * IO操作的百分比
+     *
+     * 数组越大(1-100),代表着执行IO的时间越长, 执行task任务的执行越短
+     * 反之,执行IO时间越短,执行task任务时间越长
+     *
+     * 如果数值是100的话, 代表着不会去平衡IO和非IO(task任务)之间的时间
+     */
     private volatile int ioRatio = 50;
     private int cancelledKeys;
     private boolean needsToSelectAgain;
@@ -360,9 +367,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     /**
      * Replaces the current {@link Selector} of this event loop with newly created {@link Selector}s to work
      * around the infamous epoll 100% CPU bug.
+     *
+     * 重构新的Selector 代替 当前线程中的Selector
+     *
+     * 解决 epoll 的空轮训bug
      */
     public void rebuildSelector() {
         if (!inEventLoop()) {
+            // 非当前线程, 包装成task提交到队列等待执行
             execute(new Runnable() {
                 @Override
                 public void run() {
@@ -371,6 +383,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             });
             return;
         }
+        // 如果是当前线程则直接重构
         rebuildSelector0();
     }
 
@@ -490,6 +503,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 final int ioRatio = this.ioRatio;
                 boolean ranTasks;
                 if (ioRatio == 100) {
+                    //忽略ioRatio的作用,不再限制IO和非IO操作的时间
                     try {
                         if (strategy > 0) {
                             processSelectedKeys();
@@ -507,6 +521,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         processSelectedKeys();
                     } finally {
                         // Ensure we always run tasks.
+                        // 执行IO花费的时间
                         final long ioTime = System.nanoTime() - ioStartTime;
                         ranTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
@@ -562,6 +577,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
             return true;
         }
+        // netty解决epoll空轮训bug , 默认是大于512次数则重构新的selector
         if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                 selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
             // The selector returned prematurely many times in a row.
@@ -587,7 +603,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private void processSelectedKeys() {
-        // 是使用使用后的selectedKeys还是使用原生JDK的,默认都是使用优化后的
+        // 使用优化后的selectedKeys还是使用原生JDK的,默认都是使用优化后的
         if (selectedKeys != null) {
             processSelectedKeysOptimized();
         } else {

@@ -363,6 +363,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.
      *
      * @return {@code true} if and only if at least one task was run
+     *
+     *  不受NioEventLoop.ioRatio比例的影响,将所有的的task任务执行完毕后在结束
      */
     protected boolean runAllTasks() {
         assert inEventLoop();
@@ -467,7 +469,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             afterRunningAllTasks();
             return false;
         }
-
+        // 任务停止时间,当达到该时间后,表示当前不再执行task任务,需要跳出循环(不管是否还有任务,留到下一次执行)
+        // 该时间受到NioEventLoop.ioRatio参数影响;
         final long deadline = timeoutNanos > 0 ? ScheduledFutureTask.nanoTime() + timeoutNanos : 0;
         // 已执行的任务数量
         long runTasks = 0;
@@ -480,6 +483,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
             // Check timeout every 64 tasks because nanoTime() is relatively expensive.
             // XXX: Hard-coded value - will make it configurable if it is really a problem.
+            // 因为获取纳米数是一个耗时事件,所以当执行到N(N是64的倍数)个任务之后再执行比较是否已达到超时时间
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
