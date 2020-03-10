@@ -50,6 +50,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      *  WRITE 4
      *  CONNECT 8
      *  ACCEPT 16
+     *
+     *  readInterestOp: 当创建这个channel时就已经指定了订阅事件,
+     *  Server: 16
+     *  client: 1
+     *  注册到selector中最开始订阅时间是0,只有当准备就绪后,订阅事件才会改成当前readInterestOp
      */
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;

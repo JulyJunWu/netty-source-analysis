@@ -70,6 +70,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     /**
      * {@link ChannelHandler#handlerAdded(ChannelHandlerContext)} is about to be called.
+     *
+     * 表示添加ChannelHandler的状态 , 1: 还未添加完毕(正在等待添加) ;  2: 添加完毕 3:已经将该ChannelHandler从ChannelPipeline移除完毕
      */
     private static final int ADD_PENDING = 1;
     /**
@@ -93,6 +95,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
+    /**
+     * 是否有指定的线程执行该handler,默认为null;
+     * 没有的话则使用IO线程执行该handler;
+     */
     final EventExecutor executor;
     private ChannelFuture succeededFuture;
 
@@ -100,6 +106,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
     private Tasks invokeTasks;
 
+    /**
+     * 添加handler的状态 0(初始) -> 1(handler等待添加) -> 2(handler添加完成) -> 3(从pipeline移除handler)
+     */
     private volatile int handlerState = INIT;
 
     AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor,
@@ -127,6 +136,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return channel().config().getAllocator();
     }
 
+    /**
+     * 如果当前ctx对应的handler有指定执行的线程,则后续执行该ChannelHandler都用该线程(这个线程不是IO线程,是自己重新创建的线程池,主要是用来执行耗时任务)
+     *
+     * 否则的话 使用IO线程来执行该Handler;
+     * @return
+     */
     @Override
     public EventExecutor executor() {
         if (executor == null) {

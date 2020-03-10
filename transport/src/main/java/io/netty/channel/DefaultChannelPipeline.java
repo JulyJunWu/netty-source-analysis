@@ -1134,7 +1134,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // holding the lock and so produce a deadlock if handlerAdded(...) will try to add another handler from outside
         // the EventLoop.
         PendingHandlerCallback task = pendingHandlerCallbackHead;
-        // 将任务丢到与之关联的线程池中
+        //将任务丢到与之关联的线程中执行(如果是当前的线程则直接执行,否则丢到channel对应的任务队列中)
         while (task != null) {
             task.execute();
             task = task.next;

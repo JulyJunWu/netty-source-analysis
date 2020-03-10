@@ -71,6 +71,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         id = newId();
         // 根据Server和Client 创建不同的Unsafe对象,主要是用来操作IO
+        // NioServerSocketChannel -> NioMessageUnsafe
+        // NioSocketChannel -> NioSocketChannelUnsafe(NioByteUnsafe)
         unsafe = newUnsafe();
         // 创建了ChannelPipeline管道
         pipeline = newChannelPipeline();
@@ -517,7 +519,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
                 // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                 // user may already fire events through the pipeline in the ChannelFutureListener.
-                // 添加Handler到ChannelPipeline中
+                //触发添加ChannelHandler的事件,其实就是执行handlerAdded()函数;(触发添加handlerAdded事件)
                 pipeline.invokeHandlerAddedIfNeeded();
                 // 设置该future执行成功,通知监听器等等
                 safeSetSuccess(promise);

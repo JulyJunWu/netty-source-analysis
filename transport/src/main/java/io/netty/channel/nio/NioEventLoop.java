@@ -114,7 +114,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      *  selector与unwrappedSelector关系:
      *     channel注册都是注册到unwrappedSelector
      *     当未使用优化: 则 selector = unwrappedSelector
-     *     当使用优化后: 则 selector原生的,而unwrappedSelector是优化后(底层其实是对原的包装)的;
+     *     当使用优化后: 则 selector是包装后的(底层其实是对原的包装的),而unwrappedSelector原生的;
      */
     private Selector selector;
     private Selector unwrappedSelector;
