@@ -30,10 +30,19 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
+    /**
+     * 线程池数组
+     */
     private final EventExecutor[] children;
+    /**
+     * 主要是为了迭代器进行迭代,只读模式 , 其实就是当调用remove直接抛异常
+     */
     private final Set<EventExecutor> readonlyChildren;
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
+    /**
+     * 线程池轮训策略
+     */
     private final EventExecutorChooserFactory.EventExecutorChooser chooser;
 
     /**
@@ -73,6 +82,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         }
 
         if (executor == null) {
+            //主要是负责提交任务并创建线程运行
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
@@ -107,7 +117,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 }
             }
         }
-
+        //选取轮训线程池策略
         chooser = chooserFactory.newChooser(children);
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
@@ -120,6 +130,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         };
 
         for (EventExecutor e: children) {
+            //中断的一个监听?
             e.terminationFuture().addListener(terminationListener);
         }
 
@@ -143,6 +154,9 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         return chooser.next();
     }
 
+    /**
+     * 迭代线程池,不可修改
+     */
     @Override
     public Iterator<EventExecutor> iterator() {
         return readonlyChildren.iterator();

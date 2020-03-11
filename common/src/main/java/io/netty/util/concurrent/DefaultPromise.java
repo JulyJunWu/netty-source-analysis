@@ -39,6 +39,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final int MAX_LISTENER_STACK_DEPTH = Math.min(8,
             SystemPropertyUtil.getInt("io.netty.defaultPromise.maxListenerStackDepth", 8));
     @SuppressWarnings("rawtypes")
+    /**
+     * 原子更新result字段
+     */
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
     private static final Object SUCCESS = new Object();
@@ -58,6 +61,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private Object listeners;
     /**
      * Threading - synchronized(this). We are required to hold the monitor to use Java's underlying wait()/notifyAll().
+     * 等待结果而进行阻塞的线程数量 , 一般是调用了 get()相关操作由于结果未完成 导致的
      */
     private short waiters;
 

@@ -250,6 +250,7 @@ public final class NetUtil {
         // As a SecurityManager may prevent reading the somaxconn file we wrap this in a privileged block.
         //
         // See https://github.com/netty/netty/issues/3680
+        // 获取 socket BACKLOG配置
         SOMAXCONN = AccessController.doPrivileged(new PrivilegedAction<Integer>() {
             @Override
             public Integer run() {

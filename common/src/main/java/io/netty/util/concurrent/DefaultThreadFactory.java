@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@link ThreadFactory} implementation with a simple naming rule.
+ * 线程工厂
  */
 public class DefaultThreadFactory implements ThreadFactory {
 
@@ -101,6 +102,10 @@ public class DefaultThreadFactory implements ThreadFactory {
                 Thread.currentThread().getThreadGroup() : System.getSecurityManager().getThreadGroup());
     }
 
+    /**
+     * 重点:: 生成线程函数
+     * 线程名类似于这样nioEventLoopGroup-1-2 ,类名取决于poolName
+     */
     @Override
     public Thread newThread(Runnable r) {
         Thread t = newThread(FastThreadLocalRunnable.wrap(r), prefix + nextId.incrementAndGet());
@@ -118,6 +123,10 @@ public class DefaultThreadFactory implements ThreadFactory {
         return t;
     }
 
+    /**
+     * 这边netty对原生thread进行继承,
+     * 主要是增加一个InternalThreadLocalMap(通过FastThreadLocal的下标获取,通过数组定位,速度快)  代替ThreadLocalMap(需要解决碰撞的问题,效率相对低)
+     */
     protected Thread newThread(Runnable r, String name) {
         return new FastThreadLocalThread(threadGroup, r, name);
     }

@@ -41,6 +41,10 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
                                               implements ServerSocketChannelConfig {
 
     protected final ServerSocket javaSocket;
+    /**
+     * TCP队列长度
+     * 根据平台不同而不同,windows默认200 , linux和 mac 默认128
+     */
     private volatile int backlog = NetUtil.SOMAXCONN;
 
     /**
