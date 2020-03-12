@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * Default {@link AttributeMap} implementation which use simple synchronization per bucket to keep the memory overhead
  * as low as possible.
+ *
+ * netty相关配置属性
  */
 public class DefaultAttributeMap implements AttributeMap {
 
@@ -51,16 +53,18 @@ public class DefaultAttributeMap implements AttributeMap {
                 attributes = this.attributes;
             }
         }
-
+        //根据key的id与数组的长度进行hash得到数组的索引下表
         int i = index(key);
         DefaultAttribute<?> head = attributes.get(i);
         if (head == null) {
             // No head exists yet which means we may be able to add the attribute without synchronization and just
             // use compare and set. At worst we need to fallback to synchronization and waste two allocations.
+            //分阶段一个加锁过程,如果CAS成功了,那么直接返回.如果失败了,那么启用sync执行
             head = new DefaultAttribute();
             DefaultAttribute<T> attr = new DefaultAttribute<T>(head, key);
             head.next = attr;
             attr.prev = head;
+            //通过CAS的方式设置索引为i的head , head是无用的,类似于AQS的Node,首个元素指数用来连接下一个元素,或者证明有误后续元素可供使用
             if (attributes.compareAndSet(i, null, head)) {
                 // we were able to add it so return the attr right away
                 return attr;
@@ -73,6 +77,7 @@ public class DefaultAttributeMap implements AttributeMap {
             DefaultAttribute<?> curr = head;
             for (;;) {
                 DefaultAttribute<?> next = curr.next;
+                //找到最后一个节点进行数据插入
                 if (next == null) {
                     DefaultAttribute<T> attr = new DefaultAttribute<T>(head, key);
                     curr.next = attr;
@@ -80,6 +85,7 @@ public class DefaultAttributeMap implements AttributeMap {
                     return attr;
                 }
 
+                //如果当前key存在并且尚未被移除,那么直接返回
                 if (next.key == key && !next.removed) {
                     return (Attribute<T>) next;
                 }
@@ -136,6 +142,7 @@ public class DefaultAttributeMap implements AttributeMap {
         private DefaultAttribute<?> next;
 
         // Will be set to true one the attribute is removed via getAndRemove() or remove()
+        // 属性是否被移除
         private volatile boolean removed;
 
         DefaultAttribute(DefaultAttribute<?> head, AttributeKey<T> key) {

@@ -72,8 +72,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     /**
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
+     * 正常是null代表成功
      */
     private ChannelPromise connectPromise;
+    /**
+     * 连接超时定时器
+     */
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
@@ -260,9 +264,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     connectPromise = promise;
                     requestedRemoteAddress = remoteAddress;
 
-                    // Schedule connect timeout.
+                    // Schedule connect timeout. 默认为30000,那么就是30秒的连接超时时间
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
+                        // 开启连接超时定时器
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
                             public void run() {
@@ -280,10 +285,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (future.isCancelled()) {
+                                //取消定时器
                                 if (connectTimeoutFuture != null) {
                                     connectTimeoutFuture.cancel(false);
                                 }
                                 connectPromise = null;
+                                //关闭连接
                                 close(voidPromise());
                             }
                         }
@@ -311,6 +318,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
             if (!wasActive && active) {
+                // 连接建立成功, 触发channelActive事件(整个channel生命周期内只会触发一次)
                 pipeline().fireChannelActive();
             }
 
@@ -347,6 +355,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
+                // 关闭定时器
                 if (connectTimeoutFuture != null) {
                     connectTimeoutFuture.cancel(false);
                 }
@@ -519,10 +528,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         ChannelPromise promise = connectPromise;
         if (promise != null) {
             // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            //回调
             promise.tryFailure(new ClosedChannelException());
             connectPromise = null;
         }
 
+        //关闭连接定时器
         ScheduledFuture<?> future = connectTimeoutFuture;
         if (future != null) {
             future.cancel(false);

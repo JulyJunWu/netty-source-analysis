@@ -213,11 +213,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final Channel child = (Channel) msg;
-            //给NioSocketChannel添加handler
-            // 注意 ::: 因为此时该NioSocketChannel还未完成注册操作,所有此时只是将此handler包装成task
+            //  给NioSocketChannel添加handler
+            //  注意:::因为此时该NioSocketChannel还未完成work线程的注册操作,此时将此handlerAdd函数包装成task以供注册完毕后对调用
             child.pipeline().addLast(childHandler);
             // 设置SocketChannel的可选参数和属性
             setChannelOptions(child, childOptions, logger);
+            //设置Netty的属性
             setAttributes(child, childAttrs);
 
             try {
@@ -227,6 +228,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
+                            //注册失败的话,直接关闭socket
                             forceClose(child, future.cause());
                         }
                     }

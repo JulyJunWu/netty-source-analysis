@@ -729,7 +729,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 int ops = k.interestOps();
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
-
+                // 连接建立成功,需要做一些清理工作
                 unsafe.finishConnect();
             }
 
