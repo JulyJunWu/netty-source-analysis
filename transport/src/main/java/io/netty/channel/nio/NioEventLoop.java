@@ -619,6 +619,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * 取消注册的channel
+     * @param key
+     */
     void cancel(SelectionKey key) {
         key.cancel();
         cancelledKeys ++;
@@ -729,7 +733,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 int ops = k.interestOps();
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
-                // 连接建立成功,需要做一些清理工作
+                //这块主要是针对client-bootstrap,连接建立成功,需要做一些清理工作(比如清理超时定时器)
                 unsafe.finishConnect();
             }
 
@@ -742,7 +746,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop 重点在此处 , 处理READ和ACCEPT操作
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                // 根据NioSererSocketChannel还是NioSocketChannel 执行各自实现类
+                // 根据NioSererSocketChannel(NioMessageUnsafe)还是NioSocketChannel (NioByteUnsafe)执行各自实现类
                 unsafe.read();
             }
         } catch (CancelledKeyException ignored) {

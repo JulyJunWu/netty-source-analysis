@@ -325,11 +325,19 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
     }
 
+    /**
+     * 结束TCP连接过程,通讯建立完成
+     *
+     *   如果是non block mode : 那么直接返回true(成功) 或者 false(失败)
+     *   如果是阻塞模式下,那么 一直阻塞直到成功或者false或抛出检查异常
+     *
+     * @throws Exception
+     */
     @Override
     protected void doFinishConnect() throws Exception {
         if (!javaChannel().finishConnect()) {
             throw new Error();
-        }
+    }
     }
 
     @Override

@@ -86,7 +86,13 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
      */
     public abstract class MaxMessageHandle implements ExtendedHandle {
         private ChannelConfig config;
+        /**
+         * 在一个循环中,最多能读取SocketChannel连接的次数 , 默认16
+         */
         private int maxMessagePerRead;
+        /**
+         * 当前循环接收了多少次SocketChannel连接
+         */
         private int totalMessages;
         private int totalBytesRead;
         private int attemptedBytesRead;
@@ -114,6 +120,10 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
             return alloc.ioBuffer(guess());
         }
 
+        /**
+         * 每次都是加1 , 记录当前轮接收的SocketChannel数量
+         * @param amt
+         */
         @Override
         public final void incMessagesRead(int amt) {
             totalMessages += amt;
@@ -132,11 +142,21 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
             return lastBytesRead;
         }
 
+        /**
+         * 是否继续读取SocketChannel连接
+         * @return
+         */
         @Override
         public boolean continueReading() {
             return continueReading(defaultMaybeMoreSupplier);
         }
 
+        /**
+         *  是否允许继续读取,
+         *  1.在一个循环里最多能读取 maxMessagePerRead 个
+         *  2.默认都是自动读取(true)
+         *  3.读取的字节数量 > 0 , 似乎在boss线程中接收的连接所读取的字节数量都是0,意思是监听ACCEPT线程每次只能接收一个连接??
+         */
         @Override
         public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
             return config.isAutoRead() &&

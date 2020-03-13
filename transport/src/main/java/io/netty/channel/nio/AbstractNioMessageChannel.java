@@ -66,6 +66,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
          * 读取IO操作
          *
          *  服务器监听ACCEPT其实没啥逻辑, 主要是将该链接关联到 work线程即可
+         *
+         *  此处是NioServerSocketChannel的底盘
+         *
          */
         @Override
         public void read() {
@@ -73,6 +76,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             final ChannelConfig config = config();
             //注意:此处这个pipeline是NioServerSocketChannel的,非NioSocketChannel
             final ChannelPipeline pipeline = pipeline();
+            // 缓冲分配管理,但是在此处没啥用,主要用途是在work读取(就是在NioByteUnsafe中)那块
             final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
             allocHandle.reset(config);
 
@@ -81,16 +85,16 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             try {
                 try {
                     do {
-                        // 将SocketChannel连接包装成NioSocketChannel对象
+                        // 将SocketChannel连接包装成NioSocketChannel对象放入List对象readBuf中
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             break;
                         }
+                        // 黑人问号??? localRead好像不会小于0......
                         if (localRead < 0) {
                             closed = true;
                             break;
                         }
-
                         allocHandle.incMessagesRead(localRead);
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
@@ -98,8 +102,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
 
                 int size = readBuf.size();
+                System.out.println("当前 NioServerSocketChannel接收的readBuf数量=" +size);
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
+                    // 重点,开始将NioSocketChannel从pipeline中流通
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();

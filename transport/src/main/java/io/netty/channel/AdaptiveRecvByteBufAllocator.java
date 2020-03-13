@@ -31,6 +31,8 @@ import static java.lang.Math.min;
  * number of readable bytes if the read operation was not able to fill a certain
  * amount of the allocated buffer two times consecutively.  Otherwise, it keeps
  * returning the same prediction.
+ *
+ * 自适应调整缓冲区大小的分配器
  */
 public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllocator {
 
@@ -97,10 +99,13 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         private boolean decreaseNow;
 
         HandleImpl(int minIndex, int maxIndex, int initial) {
+            // 最小的索引,也就是缓冲区最小的容量
             this.minIndex = minIndex;
+            // 最大的索引,也就说缓冲区最大的容量
             this.maxIndex = maxIndex;
-
+            // initial: 表示初始分配的缓冲区大小, index: 是指定当前initial大小在数组的索引位置
             index = getSizeTableIndex(initial);
+            // 下一次缓冲区应该分配的大小容量
             nextReceiveBufferSize = SIZE_TABLE[index];
         }
 
@@ -117,7 +122,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         }
 
         /**
-         * 经过前两次的缓冲容量,分配这次需要分配的容量
+         * 根据前两次的缓冲容量,分配这次需要分配的容量
          * @return
          */
         @Override
@@ -127,6 +132,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
 
         private void record(int actualReadBytes) {
             if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT)]) {
+                //下次缓冲区大小减小(2次会执行一次变小操作)
                 if (decreaseNow) {
                     index = max(index - INDEX_DECREMENT, minIndex);
                     nextReceiveBufferSize = SIZE_TABLE[index];
