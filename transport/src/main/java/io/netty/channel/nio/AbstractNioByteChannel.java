@@ -128,6 +128,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         }
 
+        /**
+         * 读取NioSocketChannel IO数据
+         */
         @Override
         public final void read() {
             final ChannelConfig config = config();
@@ -136,7 +139,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 return;
             }
             final ChannelPipeline pipeline = pipeline();
-            // 缓冲大小分配, 根据记录自动调整应该给下一次的缓冲区分配多大的容量
+            // 缓冲大小分配, 根据记录自动调整下一次的缓冲区分配多大的容量
             final ByteBufAllocator allocator = config.getAllocator();
             final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
             // 重置属性
@@ -150,10 +153,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     byteBuf = allocHandle.allocate(allocator);
                     // 开始读取IO数据到缓冲区
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    //读取的字节数据是否小等于0
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
                         byteBuf.release();
                         byteBuf = null;
+                        //说明这是一个连接关闭的操作
                         close = allocHandle.lastBytesRead() < 0;
                         if (close) {
                             // There is nothing left to read as we received an EOF.
@@ -161,13 +166,14 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         }
                         break;
                     }
-
+                    //当前轮次读取次数++
                     allocHandle.incMessagesRead(1);
                     readPending = false;
+                    // 触发read事件
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
                 } while (allocHandle.continueReading());
-
+                //计算下轮所需缓冲区大小
                 allocHandle.readComplete();
                 //触发NioSocketChannel 读完成事件
                 pipeline.fireChannelReadComplete();

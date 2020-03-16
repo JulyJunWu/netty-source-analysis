@@ -135,7 +135,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     /**
      * 分配指定容量的缓冲区
-     * 根据参数来决定是堆内缓冲还是直接缓冲
+     * 根据参数来决定是堆内缓冲还是直接缓冲(默认都是堆外缓冲)
      */
     @Override
     public ByteBuf ioBuffer(int initialCapacity) {

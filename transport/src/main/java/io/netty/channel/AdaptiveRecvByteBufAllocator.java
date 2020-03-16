@@ -130,6 +130,10 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             return nextReceiveBufferSize;
         }
 
+        /**
+         * 下一次缓冲区 大小是否变动(正常是2次会调整下,增加或减小缓冲区大小)
+         * @param actualReadBytes
+         */
         private void record(int actualReadBytes) {
             if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT)]) {
                 //下次缓冲区大小减小(2次会执行一次变小操作)

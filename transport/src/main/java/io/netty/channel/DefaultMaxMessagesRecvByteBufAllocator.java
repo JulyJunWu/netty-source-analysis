@@ -87,11 +87,11 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
     public abstract class MaxMessageHandle implements ExtendedHandle {
         private ChannelConfig config;
         /**
-         * 在一个循环中,最多能读取SocketChannel连接的次数 , 默认16
+         * 在一个循环中,最多能读取SocketChannel次数 , 默认16
          */
         private int maxMessagePerRead;
         /**
-         * 当前循环接收了多少次SocketChannel连接
+         * 当前循环接收了多少次SocketChannel次数
          */
         private int totalMessages;
         private int totalBytesRead;

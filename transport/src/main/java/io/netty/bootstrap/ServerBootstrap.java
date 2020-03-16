@@ -212,6 +212,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            //NioSocketChannel
             final Channel child = (Channel) msg;
             //  给NioSocketChannel添加handler
             //  注意:::因为此时该NioSocketChannel还未完成work线程的注册操作,此时将此handlerAdd函数包装成task以供注册完毕后对调用
@@ -223,6 +224,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             try {
                 // 从work中轮训一个线程 , 然后将该channel注册上到该work的线程上
+                // 到此就将channel和work的线程进行挂钩了,后续的READ|WRITE都是由work线程负责
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     //注册完成的回调函数
                     @Override

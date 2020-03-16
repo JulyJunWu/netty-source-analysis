@@ -23,6 +23,8 @@ import io.netty.channel.ChannelInboundHandler;
  * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} methods once the input of
  * a {@link SocketChannel} was shutdown and the {@link SocketChannelConfig#isAllowHalfClosure()} method returns
  * {@code true}.
+ *
+ * 单一模式(恶汉) ,这个是一个事件,为什么不用枚举之类???
  */
 public final class ChannelInputShutdownEvent {
 
