@@ -511,7 +511,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
-                // 开始注册(重点)
+                // 开始注册(重点),将channel注册到selector中
                 doRegister();
                 //设置当前channel为已注册
                 neverRegistered = false;
@@ -528,6 +528,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
                 if (isActive()) {
+                    //首次注册成功触发active事件
                     if (firstRegistration) {
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
@@ -855,7 +856,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         /**
-         * 开始读取数据
+         * 改变订阅的事件 如 connect -> read
          */
         @Override
         public final void beginRead() {

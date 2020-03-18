@@ -143,6 +143,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 // 构建SocketServerChannel的handler
                 final ChannelPipeline pipeline = ch.pipeline();
                 ChannelHandler handler = config.handler();
+                // 添加在我们定义的handler或者ChannelInitializer
                 if (handler != null) {
                     pipeline.addLast(handler);
                 }

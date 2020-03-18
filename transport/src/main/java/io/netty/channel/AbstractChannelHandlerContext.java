@@ -220,6 +220,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
+    /**
+     * 触发InboundHandler active
+     * @return
+     */
     @Override
     public ChannelHandlerContext fireChannelActive() {
         invokeChannelActive(findContextInbound(MASK_CHANNEL_ACTIVE));

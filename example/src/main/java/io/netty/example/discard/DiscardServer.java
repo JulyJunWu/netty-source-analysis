@@ -16,11 +16,9 @@
 package io.netty.example.discard;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -45,7 +43,14 @@ public final class DiscardServer {
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
               //配置boss 的ChannelHandler
-             .handler(new LoggingHandler(LogLevel.INFO))
+             .handler(new ChannelInitializer<ServerSocketChannel >() {
+                 @Override
+                 protected void initChannel(ServerSocketChannel ch) throws Exception {
+                     ChannelPipeline pipeline = ch.pipeline();
+                     pipeline.addLast(new LoggingHandler(LogLevel.INFO));
+                     pipeline.addLast(new MyHandler());
+                 }
+             })
              // 配置work的ChannelHandler
              .childHandler(new ChannelInitializer<SocketChannel>() {
                  @Override
@@ -69,5 +74,15 @@ public final class DiscardServer {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
         }
+    }
+}
+
+
+
+class MyHandler extends ChannelOutboundHandlerAdapter {
+
+    @Override
+    public void read(ChannelHandlerContext ctx) throws Exception {
+        super.read(ctx);
     }
 }

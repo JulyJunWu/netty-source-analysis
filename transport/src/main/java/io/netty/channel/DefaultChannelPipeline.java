@@ -67,6 +67,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final Channel channel;
     private final ChannelFuture succeededFuture;
     private final VoidChannelPromise voidPromise;
+    /**
+     * ByteBuf计数器追踪,默认是开启的
+     */
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
@@ -909,6 +912,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    /**
+     * 注册成功后!!!触发ChannelActive 事件(只会触发一次)
+     * @return
+     */
     @Override
     public final ChannelPipeline fireChannelActive() {
         logger.info(this.channel.getClass().getSimpleName() + " | 触发 Handler.fireChannelActive函数");
