@@ -781,7 +781,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     void invokeWriteAndFlush(Object msg, ChannelPromise promise) {
         if (invokeHandler()) {
+            // 最后通过headContext将数据写入到ChannelOutBoundBuffer的链表中,等待刷出到socketChannel
             invokeWrite0(msg, promise);
+            // 将ChannelOutBoundBuffer中数据刷出到socketChannel
             invokeFlush0();
         } else {
             writeAndFlush(msg, promise);
@@ -800,7 +802,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             ReferenceCountUtil.release(msg);
             throw e;
         }
-
+        // 查找出站处理器, 以自己为起点往headContext方向查找出站处理器
         final AbstractChannelHandlerContext next = findContextOutbound(flush ?
                 (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
         final Object m = pipeline.touch(msg, next);
@@ -823,6 +825,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
+    /**
+     * 写数据并刷出到socketChannel
+     * @param msg
+     * @return
+     */
     @Override
     public ChannelFuture writeAndFlush(Object msg) {
         return writeAndFlush(msg, newPromise());
@@ -867,6 +874,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return false;
     }
 
+    /**
+     * 默认的回调
+     * @return
+     */
     @Override
     public ChannelPromise newPromise() {
         return new DefaultChannelPromise(channel(), executor());

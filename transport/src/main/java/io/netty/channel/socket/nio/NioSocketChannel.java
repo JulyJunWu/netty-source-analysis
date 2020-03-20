@@ -391,7 +391,9 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // 取得jdk的SocketChannel,写出数据就靠它了
         SocketChannel ch = javaChannel();
+        // 一次最多能写出多少条Entry数据
         int writeSpinCount = config().getWriteSpinCount();
         do {
             if (in.isEmpty()) {

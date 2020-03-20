@@ -422,9 +422,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *
      */
     protected abstract class AbstractUnsafe implements Unsafe {
-
+        //缓存写出的数据
         private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
         private RecvByteBufAllocator.Handle recvHandle;
+        // 是否正在进行数据的写出
         private boolean inFlush0;
         /** true if the channel has never been registered, false otherwise
          *  true : 表示 channel未注册
@@ -898,7 +899,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             int size;
             try {
                 msg = filterOutboundMessage(msg);
+                // 数据的大小
                 size = pipeline.estimatorHandle().size(msg);
+                // 重置大小小于0的消息
                 if (size < 0) {
                     size = 0;
                 }
@@ -919,8 +922,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (outboundBuffer == null) {
                 return;
             }
-
+            // 标记哪些Entry节点需要写出
             outboundBuffer.addFlush();
+            //开始写出
             flush0();
         }
 
@@ -976,6 +980,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 }
             } finally {
+                //标记次写出数据结束
                 inFlush0 = false;
             }
         }

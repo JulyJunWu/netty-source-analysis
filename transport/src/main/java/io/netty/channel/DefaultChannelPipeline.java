@@ -1412,11 +1412,21 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             unsafe.beginRead();
         }
 
+        /**
+         * 将数据保存到ChannelOutBoundBuffer的链表结构中
+         * @param ctx               the {@link ChannelHandlerContext} for which the write operation is made
+         * @param msg               the message to write
+         * @param promise           the {@link ChannelPromise} to notify once the operation completes
+         */
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             unsafe.write(msg, promise);
         }
 
+        /**
+         * 将ChannelOutBoundBuffer刷出到SocketChannel
+         * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
+         */
         @Override
         public void flush(ChannelHandlerContext ctx) {
             unsafe.flush();

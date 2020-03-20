@@ -118,13 +118,16 @@ public final class ChannelOutboundBuffer {
      * the message was written.
      */
     public void addMessage(Object msg, int size, ChannelPromise promise) {
+        // 将数据包装到Entry中
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
         if (tailEntry == null) {
             flushedEntry = null;
         } else {
+            //将数据添加到末尾
             Entry tail = tailEntry;
             tail.next = entry;
         }
+        //将我们的数据置为tail
         tailEntry = entry;
         if (unflushedEntry == null) {
             unflushedEntry = entry;
@@ -145,9 +148,11 @@ public final class ChannelOutboundBuffer {
         //
         // See https://github.com/netty/netty/issues/2577
         Entry entry = unflushedEntry;
+        // 如果说entry不为null,说明还有数据未刷,需要进行添加到待刷节点
         if (entry != null) {
             if (flushedEntry == null) {
                 // there is no flushedEntry yet, so start with the entry
+                //如果首个待刷出的Entry没有,那么下次数据就从这个节点开始刷
                 flushedEntry = entry;
             }
             do {
@@ -177,8 +182,9 @@ public final class ChannelOutboundBuffer {
         if (size == 0) {
             return;
         }
-
+        //增加totalPendingSize大小
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
+        //总的大小超出了高水位线
         if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
             setUnwritable(invokeLater);
         }
@@ -196,13 +202,18 @@ public final class ChannelOutboundBuffer {
         if (size == 0) {
             return;
         }
-
+        // 将当前totalPendingSize减去size
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
         if (notifyWritability && newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()) {
             setWritable(invokeLater);
         }
     }
 
+    /**
+     * 计算数据可读大小
+     * @param msg
+     * @return
+     */
     private static long total(Object msg) {
         if (msg instanceof ByteBuf) {
             return ((ByteBuf) msg).readableBytes();
@@ -471,6 +482,7 @@ public final class ChannelOutboundBuffer {
             entry = entry.next;
         }
         this.nioBufferCount = nioBufferCount;
+        //记录此轮总共写出数据的大小
         this.nioBufferSize = nioBufferSize;
 
         return nioBuffers;
@@ -796,6 +808,11 @@ public final class ChannelOutboundBuffer {
         } while (isFlushedEntry(entry));
     }
 
+    /**
+     * 如果目标节 == unflushedEntry  , 说明此轮的 写出已经结束, unflushedEntry节点需要等待下次的写出
+     * @param e
+     * @return
+     */
     private boolean isFlushedEntry(Entry e) {
         return e != null && e != unflushedEntry;
     }

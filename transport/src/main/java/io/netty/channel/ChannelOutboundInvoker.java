@@ -226,6 +226,7 @@ public interface ChannelOutboundInvoker {
 
     /**
      * Shortcut for call {@link #write(Object)} and {@link #flush()}.
+     * 写数据并刷出缓冲区
      */
     ChannelFuture writeAndFlush(Object msg);
 
