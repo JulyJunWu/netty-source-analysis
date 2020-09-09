@@ -980,7 +980,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 }
             } finally {
-                //标记次写出数据结束
+                //标记此次写出数据结束
                 inFlush0 = false;
             }
         }

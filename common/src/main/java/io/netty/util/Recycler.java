@@ -23,6 +23,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.ref.WeakReference;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -120,15 +121,16 @@ public abstract class Recycler<T> {
         protected void onRemoval(Stack<T> value) {
             // Let us remove the WeakOrderQueue from the WeakHashMap directly if its safe to remove some overhead
             if (value.threadRef.get() == Thread.currentThread()) {
-               if (DELAYED_RECYCLED.isSet()) {
-                   DELAYED_RECYCLED.get().remove(value);
-               }
+                if (DELAYED_RECYCLED.isSet()) {
+                    DELAYED_RECYCLED.get().remove(value);
+                }
             }
         }
     };
 
     protected Recycler() {
         this(DEFAULT_MAX_CAPACITY_PER_THREAD);
+        new BigDecimal(6.66d);
     }
 
     protected Recycler(int maxCapacityPerThread) {
@@ -195,11 +197,12 @@ public abstract class Recycler<T> {
 
     protected abstract T newObject(Handle<T> handle);
 
-    public interface Handle<T> extends ObjectPool.Handle<T>  { }
+    public interface Handle<T> extends ObjectPool.Handle<T> {
+    }
 
     private static final class DefaultHandle<T> implements Handle<T> {
-        int lastRecycledId;
-        int recycleId;
+        int lastRecycledId; // 不等于说明已经被回收了
+        int recycleId;  // 不等于说明已经被回收了
         // 是否被回收
         boolean hasBeenRecycled;
         // 对象池
@@ -212,6 +215,7 @@ public abstract class Recycler<T> {
 
         @Override
         public void recycle(Object object) {
+            System.out.println("回收对象: class:" + object.getClass().getName());
             if (object != value) {
                 throw new IllegalArgumentException("object does not belong to handle");
             }
@@ -227,11 +231,11 @@ public abstract class Recycler<T> {
 
     private static final FastThreadLocal<Map<Stack<?>, WeakOrderQueue>> DELAYED_RECYCLED =
             new FastThreadLocal<Map<Stack<?>, WeakOrderQueue>>() {
-        @Override
-        protected Map<Stack<?>, WeakOrderQueue> initialValue() {
-            return new WeakHashMap<Stack<?>, WeakOrderQueue>();
-        }
-    };
+                @Override
+                protected Map<Stack<?>, WeakOrderQueue> initialValue() {
+                    return new WeakHashMap<Stack<?>, WeakOrderQueue>();
+                }
+            };
 
     // a queue that makes only moderate guarantees about visibility: items are seen in the correct order,
     // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
@@ -295,7 +299,7 @@ public abstract class Recycler<T> {
             }
 
             static boolean reserveSpaceForLink(AtomicInteger availableSharedCapacity) {
-                for (;;) {
+                for (; ; ) {
                     int available = availableSharedCapacity.get();
                     if (available < LINK_CAPACITY) {
                         return false;
@@ -448,7 +452,7 @@ public abstract class Recycler<T> {
                         continue;
                     }
                     element.stack = dst;
-                    dstElems[newDstSize ++] = element;
+                    dstElems[newDstSize++] = element;
                 }
 
                 if (srcEnd == LINK_CAPACITY && head.next != null) {
@@ -489,12 +493,19 @@ public abstract class Recycler<T> {
         private final int maxDelayedQueues;
 
         private final int maxCapacity;
+        /**
+         * 阈值,当已回收的数量(handleRecycleCount)的值大于 该值时,说明这个对象需要进行缓存
+         */
         private final int interval;
         DefaultHandle<?>[] elements;
         /**
          * elements中 真实含有缓存实例的大小
          */
         int size;
+        /**
+         * 已回收的数量,当大于interval时,重置0(意思就是当回收的对象数量达到了一个阈值(就是interval),那么就将这个对象进行缓存,没达到就说嘛不需要进行缓存)
+         * 第一次回收的对象必定 会缓存,因为handleRecycleCount默认就是等于interval
+         */
         private int handleRecycleCount;
         private WeakOrderQueue cursor, prev;
         private volatile WeakOrderQueue head;
@@ -532,7 +543,7 @@ public abstract class Recycler<T> {
             return newCapacity;
         }
 
-        @SuppressWarnings({ "unchecked", "rawtypes" })
+        @SuppressWarnings({"unchecked", "rawtypes"})
         DefaultHandle<T> pop() {
             int size = this.size;
             if (size == 0) {
@@ -545,7 +556,7 @@ public abstract class Recycler<T> {
                     return null;
                 }
             }
-            size --;
+            size--;
             DefaultHandle ret = elements[size];
             elements[size] = null;
             // As we already set the element[size] to null we also need to store the updated size before we do
@@ -598,7 +609,7 @@ public abstract class Recycler<T> {
                     // performing a volatile read to confirm there is no data left to collect.
                     // We never unlink the first queue, as we don't want to synchronize on updating the head.
                     if (cursor.hasFinalData()) {
-                        for (;;) {
+                        for (; ; ) {
                             if (cursor.transfer(this)) {
                                 success = true;
                             } else {
@@ -697,13 +708,22 @@ public abstract class Recycler<T> {
             return WeakOrderQueue.newQueue(this, thread);
         }
 
+        /**
+         * 是否需要缓存该对象,主要是控制回收的大小
+         * 每回收8次,就缓存一个Handle对象
+         *
+         * @param handle
+         * @return
+         */
         boolean dropHandle(DefaultHandle<?> handle) {
             if (!handle.hasBeenRecycled) {
+                //  如果不大于阈值interval,那么递增,说明该对象未达到缓存要求
                 if (handleRecycleCount < interval) {
                     handleRecycleCount++;
                     // Drop the object.
                     return true;
                 }
+                //  将已回收对象数量进行重置,重新开始累计下一个需要回收的对象
                 handleRecycleCount = 0;
                 handle.hasBeenRecycled = true;
             }

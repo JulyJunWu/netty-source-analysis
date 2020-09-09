@@ -83,11 +83,11 @@ public final class ChannelOutboundBuffer {
     //
     // The Entry that is the first in the linked-list structure that was flushed
     private Entry flushedEntry;
-    // The Entry which is the first unflushed in the linked-list structure
+    // The Entry which is the first unflushed in the linked-list structure  等待刷出的第一个Entry数据
     private Entry unflushedEntry;
     // The Entry which represents the tail of the buffer
     private Entry tailEntry;
-    // The number of flushed entries that are not written yet
+    // The number of flushed entries that are not written yet  需要刷出的Entry数据数量,如果等于0,说明这一波的数据socket写出完毕
     private int flushed;
 
     private int nioBufferCount;
@@ -281,12 +281,14 @@ public final class ChannelOutboundBuffer {
 
         ChannelPromise promise = e.promise;
         int size = e.pendingSize;
-
+        //  移除已写出的Entry数据
         removeEntry(e);
 
         if (!e.cancelled) {
             // only release message, notify and decrement if it was not canceled before.
+            //  释放计数
             ReferenceCountUtil.safeRelease(msg);
+            //  触发回调
             safeSuccess(promise);
             decrementPendingOutboundBytes(size, false, true);
         }
@@ -481,7 +483,7 @@ public final class ChannelOutboundBuffer {
             }
             entry = entry.next;
         }
-        this.nioBufferCount = nioBufferCount;
+        this.nioBufferCount = nioBufferCount; // 数组的大小
         //记录此轮总共写出数据的大小
         this.nioBufferSize = nioBufferSize;
 
@@ -837,7 +839,7 @@ public final class ChannelOutboundBuffer {
         /**
          * 对象池,复用
          *
-         * 明天的任务,搞清楚这个缓存池
+         * 明天的任务,搞清楚这个缓存池(惭愧)
          */
         private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new MyObjectCreator());
 
@@ -856,7 +858,7 @@ public final class ChannelOutboundBuffer {
         private Entry(Handle<Entry> handle) {
             this.handle = handle;
         }
-
+        //  正常而言,size == total
         static Entry newInstance(Object msg, int size, long total, ChannelPromise promise) {
             Entry entry = RECYCLER.get();
             entry.msg = msg;

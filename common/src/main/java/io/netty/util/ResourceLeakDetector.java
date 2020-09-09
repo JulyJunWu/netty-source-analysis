@@ -23,23 +23,24 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import static io.netty.util.internal.StringUtil.EMPTY_STRING;
-import static io.netty.util.internal.StringUtil.NEWLINE;
-import static io.netty.util.internal.StringUtil.simpleClassName;
+import static io.netty.util.internal.StringUtil.*;
 
+/**
+ * 资源(对象)泄漏排查
+ * @param <T>
+ */
 public class ResourceLeakDetector<T> {
 
     private static final String PROP_LEVEL_OLD = "io.netty.leakDetectionLevel";
@@ -49,6 +50,9 @@ public class ResourceLeakDetector<T> {
     private static final String PROP_TARGET_RECORDS = "io.netty.leakDetection.targetRecords";
     private static final int DEFAULT_TARGET_RECORDS = 4;
 
+    /**
+     * 设置触发检查对象泄漏的概率 -Dio.netty.leakDetection.samplingInterval
+     */
     private static final String PROP_SAMPLING_INTERVAL = "io.netty.leakDetection.samplingInterval";
     // There is a minor performance benefit in TLR if this is a power of 2.
     private static final int DEFAULT_SAMPLING_INTERVAL = 128;
@@ -254,6 +258,7 @@ public class ResourceLeakDetector<T> {
         }
 
         if (level.ordinal() < Level.PARANOID.ordinal()) {
+            // 1/128的概率来触发检查泄漏
             if ((PlatformDependent.threadLocalRandom().nextInt(samplingInterval)) == 0) {
                 reportLeak();
                 return new DefaultResourceLeak(obj, refQueue, allLeaks);
@@ -284,6 +289,9 @@ public class ResourceLeakDetector<T> {
         return logger.isErrorEnabled();
     }
 
+    /**
+     * 检查是否发生泄漏
+     */
     private void reportLeak() {
         if (!needReport()) {
             clearRefQueue();
@@ -303,6 +311,7 @@ public class ResourceLeakDetector<T> {
 
             String records = ref.toString();
             if (reportedLeaks.add(records)) {
+                // 明确发生了内存泄漏
                 if (records.isEmpty()) {
                     reportUntracedLeak(resourceType);
                 } else {
@@ -315,6 +324,10 @@ public class ResourceLeakDetector<T> {
     /**
      * This method is called when a traced leak is detected. It can be overridden for tracking how many times leaks
      * have been detected.
+     *
+     *
+     *
+     * The general rule of thumb is that the party who accesses a reference-counted object lastly is responsible for the destruction of the reference-counted object.
      */
     protected void reportTracedLeak(String resourceType, String records) {
         logger.error(
